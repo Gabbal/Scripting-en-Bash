@@ -8,10 +8,30 @@ function ctrl_c(){
 # Ctrl+C
 trap ctrl_c INT
 
-# Envío una cadena vacía a la ruta: /dev/tcp/127.0.0.1/ y voy iterando por c/u de los puertos.
-# Esto me brinda un código de estado, 0 exitoso | 1 no exitoso. 
+declare -a ports=( $(seq 1 65535) )
+
+function checkPort(){
+
+  (exec 3<> /dev/tcp/$1/$2) 2>/dev/null
+
+  if [ $? -eq 0 ]; then
+    echo "[+] Host $1 - Port $2 (OPEN)"
+  fi
+
+  exec 3<&-
+  exec 3>&-
+}
+
 tput civis
-for port in $(seq 1 65535); do
-  (echo '' > /dev/tcp/127.0.0.1/$port) 2>/dev/null && echo "[+] $port - OPEN" &
-done; wait
+
+if [ $1 ]; then
+  for port in ${ports[@]}; do
+    checkPort $1 $port &
+  done
+else
+  echo -e "\n[!] Uso: $0 <ip-address>\n"
+fi
+
+wait
+
 tput cnorm
